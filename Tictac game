@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Neon Tic Tac Toe</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #1a1a2e;
+      --cell-bg: #16213e;
+      --border-color: #0f3460;
+      --x-color: #39b5e0;
+      --o-color: #e94560;
+      --winner-color: #50fa7b;
+      --text-color: #e0e0e0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 1rem;
+    }
+
+    .game-container {
+      max-width: 400px;
+      width: 100%;
+      text-align: center;
+    }
+
+    h1 {
+      font-size: clamp(1.5rem, 5vw, 2.5rem);
+      color: var(--text-color);
+      text-shadow: 0 0 5px var(--x-color), 0 0 10px var(--o-color);
+      margin-bottom: 1rem;
+    }
+
+    .scoreboard {
+      display: flex;
+      justify-content: space-around;
+      margin-bottom: 1rem;
+      font-size: 1rem;
+    }
+
+    .status {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      min-height: 1.5rem;
+    }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 5px;
+      background: var(--border-color);
+      padding: 5px;
+    }
+
+    .cell {
+      background: var(--cell-bg);
+      aspect-ratio: 1/1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: clamp(2rem, 8vw, 3rem);
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.3s ease;
+    }
+
+    .cell.x {
+      color: var(--x-color);
+      text-shadow: 0 0 5px var(--x-color), 0 0 15px var(--x-color);
+    }
+
+    .cell.o {
+      color: var(--o-color);
+      text-shadow: 0 0 5px var(--o-color), 0 0 15px var(--o-color);
+    }
+
+    .cell.winner {
+      background: var(--winner-color);
+      animation: pulse 1s infinite alternate;
+      color: var(--bg-color) !important;
+      text-shadow: none !important;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.05); }
+    }
+
+    .buttons {
+      margin-top: 1rem;
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border: none;
+      cursor: pointer;
+      border-radius: 5px;
+      transition: all 0.3s ease;
+      color: var(--text-color);
+    }
+
+    .restart-btn {
+      background: var(--x-color);
+      box-shadow: 0 0 5px var(--x-color), 0 0 15px var(--x-color);
+    }
+
+    .restart-btn:hover {
+      box-shadow: 0 0 10px var(--x-color), 0 0 20px var(--x-color);
+    }
+
+    .reset-btn {
+      background: var(--o-color);
+      box-shadow: 0 0 5px var(--o-color), 0 0 15px var(--o-color);
+    }
+
+    .reset-btn:hover {
+      box-shadow: 0 0 10px var(--o-color), 0 0 20px var(--o-color);
+    }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>Neon Tic Tac Toe</h1>
+    <div class="scoreboard">
+      <div>Player X: <span id="scoreX">0</span></div>
+      <div>Player O: <span id="scoreO">0</span></div>
+    </div>
+    <div class="status" id="status">Player X ki baari</div>
+    <div class="board" id="board">
+      <div class="cell" data-index="0"></div>
+      <div class="cell" data-index="1"></div>
+      <div class="cell" data-index="2"></div>
+      <div class="cell" data-index="3"></div>
+      <div class="cell" data-index="4"></div>
+      <div class="cell" data-index="5"></div>
+      <div class="cell" data-index="6"></div>
+      <div class="cell" data-index="7"></div>
+      <div class="cell" data-index="8"></div>
+    </div>
+    <div class="buttons">
+      <button class="restart-btn" id="restart">Phir se Shuru Karein</button>
+      <button class="reset-btn" id="resetScore">Score Reset Karein</button>
+    </div>
+  </div>
+
+  <script>
+    const cells = document.querySelectorAll('.cell');
+    const statusEl = document.getElementById('status');
+    const scoreXEl = document.getElementById('scoreX');
+    const scoreOEl = document.getElementById('scoreO');
+    const restartBtn = document.getElementById('restart');
+    const resetScoreBtn = document.getElementById('resetScore');
+
+    let boardState = Array(9).fill(null);
+    let currentPlayer = 'x';
+    let gameActive = true;
+    let scoreX = 0;
+    let scoreO = 0;
+
+    const winningCombinations = [
+      [0,1,2], [3,4,5], [6,7,8],
+      [0,3,6], [1,4,7], [2,5,8],
+      [0,4,8], [2,4,6]
+    ];
+
+    function updateStatus(message) {
+      statusEl.textContent = message;
+    }
+
+    function checkWinner() {
+      for (let combo of winningCombinations) {
+        const [a, b, c] = combo;
+        if (boardState[a] && boardState[a] === boardState[b] && boardState[a] === boardState[c]) {
+          gameActive = false;
+          cells[a].classList.add('winner');
+          cells[b].classList.add('winner');
+          cells[c].classList.add('winner');
+
+          if (boardState[a] === 'x') {
+            scoreX++;
+            updateStatus("Player X jeet gaye!");
+          } else {
+            scoreO++;
+            updateStatus("Player O jeet gaye!");
+          }
+
+          scoreXEl.textContent = scoreX;
+          scoreOEl.textContent = scoreO;
+          return true;
+        }
+      }
+
+      if (!boardState.includes(null)) {
+        gameActive = false;
+        updateStatus("Match barabar!");
+        return true;
+      }
+
+      return false;
+    }
+
+    function handleCellClick(e) {
+      const index = e.target.dataset.index;
+      if (boardState[index] || !gameActive) return;
+
+      boardState[index] = currentPlayer;
+      e.target.classList.add(currentPlayer);
+      e.target.textContent = currentPlayer.toUpperCase();
+
+      if (!checkWinner()) {
+        currentPlayer = currentPlayer === 'x' ? 'o' : 'x';
+        updateStatus(`Player ${currentPlayer.toUpperCase()} ki baari`);
+      }
+    }
+
+    function restartGame() {
+      boardState.fill(null);
+      cells.forEach(cell => {
+        cell.textContent = '';
+        cell.classList.remove('x', 'o', 'winner');
+      });
+      currentPlayer = 'x';
+      gameActive = true;
+      updateStatus("Player X ki baari");
+    }
+
+    function resetScore() {
+      scoreX = 0;
+      scoreO = 0;
+      scoreXEl.textContent = scoreX;
+      scoreOEl.textContent = scoreO;
+      restartGame();
+    }
+
+    cells.forEach(cell => cell.addEventListener('click', handleCellClick));
+    restartBtn.addEventListener('click', restartGame);
+    resetScoreBtn.addEventListener('click', resetScore);
+  </script>
+</body>
+</html>
